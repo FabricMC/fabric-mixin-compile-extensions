@@ -1,0 +1,82 @@
+plugins {
+	id 'java'
+	id 'idea'
+	id 'eclipse'
+	id 'maven-publish'
+}
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+group = 'net.fabricmc'
+archivesBaseName = project.name
+version = '0.1.0'
+
+def ENV = System.getenv()
+if (ENV.BUILD_NUMBER) {
+    version = version + "." + "${System.getenv().BUILD_NUMBER}"
+}
+
+repositories {
+	mavenCentral()
+	maven {
+		name = "Fabric"
+		url = 'https://maven.fabricmc.net/'
+	}
+}
+
+dependencies {
+	implementation 'net.fabricmc:tiny-mappings-parser:0.1.1.8'
+
+	// use newer dependencies
+	implementation ('com.google.code.gson:gson:2.8.5')
+	implementation ('com.google.guava:guava:27.1-jre')
+
+	implementation ('net.fabricmc:sponge-mixin:0.7.11.30') {
+		exclude module: 'launchwrapper'
+		exclude module: 'guava'
+		exclude module: 'gson'
+	}
+}
+
+task sourcesJar(type: Jar, dependsOn: classes) {
+	classifier = 'sources'
+	from sourceSets.main.allSource
+}
+
+task javadocJar(type: Jar, dependsOn: javadoc) {
+	classifier = 'javadoc'
+	from javadoc.destinationDir
+}
+
+apply from: 'https://github.com/FabricMC/fabric-docs/raw/master/gradle/license.gradle'
+
+task wrapper(type: Wrapper) {
+	gradleVersion = '4.10.3'
+}
+
+publishing {
+	publications {
+		plugin(MavenPublication) { publication ->
+			groupId project.group
+			artifactId project.archivesBaseName
+			version project.version
+
+			from components["java"]
+	
+			artifact sourcesJar
+			artifact javadocJar
+		}
+	}
+	repositories {
+		maven {
+			url "http://mavenupload.modmuss50.me/"
+			if (project.hasProperty('mavenPass')) {
+				credentials {
+					username 'buildslave'
+					password project.getProperty('mavenPass')
+				}
+			}
+		}
+	}
+}
