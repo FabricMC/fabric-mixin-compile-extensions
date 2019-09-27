@@ -24,15 +24,16 @@
 
 package net.fabricmc.loom.mixin;
 
-import net.fabricmc.mappings.*;
+import net.fabricmc.mapping.tree.*;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingField;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingMethod;
 import org.spongepowered.tools.obfuscation.mapping.common.MappingProvider;
 
 import javax.annotation.processing.Filer;
 import javax.annotation.processing.Messager;
+import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
+import java.io.FileReader;
 import java.io.IOException;
 
 public class MixinMappingProviderTiny extends MappingProvider {
@@ -110,34 +111,23 @@ public class MixinMappingProviderTiny extends MappingProvider {
 
 	@Override
 	public void read(File input) throws IOException {
-		Mappings mappings;
-
-		try (FileInputStream stream = new FileInputStream(input)) {
-			mappings = MappingsProvider.readTinyMappings(stream, false);
+		TinyTree tree;
+		try (BufferedReader reader = new BufferedReader(new FileReader(input))) {
+			tree = TinyMappingFactory.loadWithDetection(reader);
 		}
 
-		for (ClassEntry entry : mappings.getClassEntries()) {
-			classMap.put(entry.get(from), entry.get(to));
-		}
+		for (ClassDef cls : tree.getClasses()) {
+			String fromClass = cls.getName(from);
+			String toClass = cls.getName(to);
+			classMap.put(fromClass, toClass);
 
-		for (FieldEntry entry : mappings.getFieldEntries()) {
-			EntryTriple fromEntry = entry.get(from);
-			EntryTriple toEntry = entry.get(to);
+			for (FieldDef field : cls.getFields()) {
+				fieldMap.put(new MappingField(fromClass, field.getName(from), field.getDescriptor(from)), new MappingField(toClass, field.getName(to), field.getDescriptor(to)));
+			}
 
-			fieldMap.put(
-					new MappingField(fromEntry.getOwner(), fromEntry.getName(), fromEntry.getDesc()),
-					new MappingField(toEntry.getOwner(), toEntry.getName(), toEntry.getDesc())
-			);
-		}
-
-		for (MethodEntry entry : mappings.getMethodEntries()) {
-			EntryTriple fromEntry = entry.get(from);
-			EntryTriple toEntry = entry.get(to);
-
-			methodMap.put(
-					new MappingMethod(fromEntry.getOwner(), fromEntry.getName(), fromEntry.getDesc()),
-					new MappingMethod(toEntry.getOwner(), toEntry.getName(), toEntry.getDesc())
-			);
+			for (MethodDef method : cls.getMethods()) {
+				methodMap.put(new MappingMethod(fromClass, method.getName(from), method.getDescriptor(from)), new MappingMethod(toClass, method.getName(to), method.getDescriptor(to)));
+			}
 		}
 	}
 }

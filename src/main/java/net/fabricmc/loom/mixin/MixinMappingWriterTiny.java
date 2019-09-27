@@ -24,6 +24,7 @@
 
 package net.fabricmc.loom.mixin;
 
+import org.spongepowered.asm.obfuscation.mapping.IMapping;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingField;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingMethod;
 import org.spongepowered.tools.obfuscation.ObfuscationType;
@@ -34,6 +35,10 @@ import javax.annotation.processing.Filer;
 import javax.annotation.processing.Messager;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Map;
+import java.util.TreeMap;
 
 /**
  * Created by asie on 10/9/16.
@@ -46,20 +51,53 @@ public class MixinMappingWriterTiny extends MappingWriter {
 	@Override
 	public void write(String output, ObfuscationType type, IMappingConsumer.MappingSet<MappingField> fields, IMappingConsumer.MappingSet<MappingMethod> methods) {
 		if (output != null) {
-			String from = type.getKey().split(":")[0];
-			String to = type.getKey().split(":")[1];
+			String[] parts = type.getKey().split(":");
+			String from = parts[0];
+			String to = parts[1];
+
+			Map<String, Collection<String>> classesData = new TreeMap<>(); // Sorted to make 
+
+			print(classesData, "f", fields);
+			print(classesData, "m", methods);
 
 			try (PrintWriter writer = this.openFileWriter(output, type + " output TinyMappings")) {
-				writer.println(String.format("v1\t%s\t%s", from, to));
-				for (IMappingConsumer.MappingSet.Pair<MappingField> pair : fields) {
-					writer.println(String.format("FIELD\t%s\t%s\t%s\t%s", pair.from.getOwner(), pair.from.getDesc(), pair.from.getSimpleName(), pair.to.getSimpleName()));
-				}
-				for (IMappingConsumer.MappingSet.Pair<MappingMethod> pair : methods) {
-					writer.println(String.format("METHOD\t%s\t%s\t%s\t%s", pair.from.getOwner(), pair.from.getDesc(), pair.from.getSimpleName(), pair.to.getSimpleName()));
+				writer.println(String.format("tiny\t2\t0\t%s\t%s", from, to));
+				// writer.println("\tsorted-classes"); todo write sorted attribute
+				for (Collection<String> lines : classesData.values()) {
+					for (String line : lines) {
+						writer.println(line);
+					}
 				}
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
 		}
+	}
+
+	private static void print(Map<String, Collection<String>> classesData, String type, IMappingConsumer.MappingSet<? extends IMapping<?>> mappingSet) {
+		for (IMappingConsumer.MappingSet.Pair<? extends IMapping<?>> pair : mappingSet) {
+			classesData.computeIfAbsent(pair.from.getOwner(), key -> {
+				Collection<String> ret = new ArrayList<>();
+				ret.add(printClassLine(key, pair.to.getOwner()));
+				return ret;
+			}).add(printClassMemberLine(type, pair.from.getDesc(), pair.from.getName(), pair.to.getName()));
+		}
+	}
+
+	private static String printClassLine(String oldName, String newName) {
+		StringBuilder result = new StringBuilder("c\t");
+		result.append(oldName).append("\t");
+		if (!oldName.equals(newName))
+			result.append(newName);
+		return result.toString();
+	}
+
+	private static String printClassMemberLine(String type, String desc, String oldName, String newName) {
+		StringBuilder result = new StringBuilder("\t").append(type).append("\t");
+		result.append(desc).append("\t");
+		result.append(oldName).append("\t");
+		if (!oldName.equals(newName))
+			result.append(newName);
+		return result.toString();
 	}
 }
