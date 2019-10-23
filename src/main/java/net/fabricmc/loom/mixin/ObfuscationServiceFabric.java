@@ -25,6 +25,7 @@
 package net.fabricmc.loom.mixin;
 
 import com.google.common.collect.ImmutableSet;
+import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
 import org.spongepowered.tools.obfuscation.service.IObfuscationService;
 import org.spongepowered.tools.obfuscation.service.ObfuscationTypeDescriptor;
 
@@ -69,6 +70,11 @@ public class ObfuscationServiceFabric implements IObfuscationService {
 	}
 
 	@Override
+	public Collection<ObfuscationTypeDescriptor> getObfuscationTypes(IMixinAnnotationProcessor ap) {
+		return getObfuscationTypes();
+	}
+
+	// Hook preserved for Mixin 0.7 backward compatibility
 	public Collection<ObfuscationTypeDescriptor> getObfuscationTypes() {
 		return ImmutableSet.of(
 				createObfuscationType("official", "intermediary"),
