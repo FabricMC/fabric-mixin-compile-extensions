@@ -10,7 +10,7 @@ targetCompatibility = 1.8
 
 group = 'net.fabricmc'
 archivesBaseName = project.name
-version = '0.1.0'
+version = '0.2.0'
 
 def ENV = System.getenv()
 if (ENV.BUILD_NUMBER) {
@@ -26,13 +26,13 @@ repositories {
 }
 
 dependencies {
-	implementation 'net.fabricmc:tiny-mappings-parser:0.1.1.8'
+	implementation 'net.fabricmc:tiny-mappings-parser:0.2.0.11'
 
 	// use newer dependencies
 	implementation ('com.google.code.gson:gson:2.8.5')
 	implementation ('com.google.guava:guava:27.1-jre')
 
-	implementation ('net.fabricmc:sponge-mixin:0.7.11.36') {
+	implementation ('net.fabricmc:sponge-mixin:0.7.11.38') {
 		exclude module: 'launchwrapper'
 		exclude module: 'guava'
 		exclude module: 'gson'
@@ -51,7 +51,7 @@ task javadocJar(type: Jar, dependsOn: javadoc) {
 
 apply from: 'https://github.com/FabricMC/fabric-docs/raw/master/gradle/license.gradle'
 
-task wrapper(type: Wrapper) {
+wrapper {
 	gradleVersion = '4.10.3'
 }
 
