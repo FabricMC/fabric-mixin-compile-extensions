@@ -84,7 +84,16 @@ public class MixinMappingProviderTiny extends MappingProvider {
 
 	@Override
 	public MappingField getFieldMapping(MappingField field) {
-		MappingField mapped = this.fieldMap.get(field);
+		// Remove any form of method parameters form the field desc, working around https://github.com/SpongePowered/Mixin/issues/419
+		String desc = field.getDesc();
+		int i = desc.indexOf(")");
+
+		if (i != -1) {
+			desc = desc.substring(i + 1);
+		}
+
+		MappingField fixed = new MappingField(field.getOwner(), field.getName(), desc);
+		MappingField mapped = this.fieldMap.get(fixed);
 		if (mapped != null)
 			return mapped;
 
