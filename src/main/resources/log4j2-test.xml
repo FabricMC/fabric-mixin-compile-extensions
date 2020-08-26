@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN">
+  <!-- This is named log4j2-test.xml because -test has higher priority than the normal file that we
+  will pull into the javac classpath via the Minecraft.jar dependency. -->
+  <Appenders>
+    <Console name="Console" target="SYSTEM_OUT">
+      <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
+    </Console>
+  </Appenders>
+  <Loggers>
+    <Root level="warn">
+      <AppenderRef ref="Console"/>
+    </Root>
+  </Loggers>
+</Configuration>
