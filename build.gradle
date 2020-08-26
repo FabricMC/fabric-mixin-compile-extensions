@@ -10,7 +10,7 @@ targetCompatibility = 1.8
 
 group = 'net.fabricmc'
 archivesBaseName = project.name
-version = '0.3.1'
+version = '0.3.2'
 
 def ENV = System.getenv()
 if (ENV.BUILD_NUMBER) {
