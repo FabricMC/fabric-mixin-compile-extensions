@@ -1,7 +1,5 @@
 plugins {
 	id 'java'
-	id 'idea'
-	id 'eclipse'
 	id 'maven-publish'
 }
 
@@ -10,12 +8,10 @@ targetCompatibility = 1.8
 
 group = 'net.fabricmc'
 archivesBaseName = project.name
-version = '0.3.2'
+version = '0.4.0'
 
 def ENV = System.getenv()
-if (ENV.BUILD_NUMBER) {
-    version = version + "." + "${System.getenv().BUILD_NUMBER}"
-}
+version = version + (ENV.GITHUB_ACTIONS ? "" : "+local")
 
 repositories {
 	mavenCentral()
@@ -26,13 +22,13 @@ repositories {
 }
 
 dependencies {
-	implementation 'net.fabricmc:tiny-mappings-parser:0.2.0.11'
+	implementation 'net.fabricmc:tiny-mappings-parser:0.3.0+build.17'
 
 	// use newer dependencies
 	implementation ('com.google.code.gson:gson:2.8.5')
 	implementation ('com.google.guava:guava:27.1-jre')
 
-	implementation ('net.fabricmc:sponge-mixin:0.8+build.18') {
+	implementation ('net.fabricmc:sponge-mixin:0.9.1+mixin.0.8.2') {
 		exclude module: 'launchwrapper'
 		exclude module: 'guava'
 		exclude module: 'gson'
@@ -49,11 +45,15 @@ task javadocJar(type: Jar, dependsOn: javadoc) {
 	from javadoc.destinationDir
 }
 
-apply from: 'https://github.com/FabricMC/fabric-docs/raw/master/gradle/license.gradle'
+tasks.withType(JavaCompile).configureEach {
+	it.options.encoding = "UTF-8"
 
-wrapper {
-	gradleVersion = '4.10.3'
+	if (JavaVersion.current().isJava9Compatible()) {
+		it.options.release = 8
+	}
 }
+
+apply from: 'https://github.com/FabricMC/fabric-docs/raw/master/gradle/license.gradle'
 
 publishing {
 	publications {
@@ -69,14 +69,28 @@ publishing {
 		}
 	}
 	repositories {
-		maven {
-			url "http://mavenupload.modmuss50.me/"
-			if (project.hasProperty('mavenPass')) {
+		if (ENV.MAVEN_URL) {
+			maven {
+				url ENV.MAVEN_URL
 				credentials {
-					username 'buildslave'
-					password project.getProperty('mavenPass')
+					username ENV.MAVEN_USERNAME
+					password ENV.MAVEN_PASSWORD
 				}
 			}
 		}
 	}
 }
+
+// A task to ensure that the version being released has not already been released.
+task checkVersion {
+	doFirst {
+		def xml = new URL("https://maven.fabricmc.net/net/fabricmc/fabric-mixin-compile-extensions/maven-metadata.xml").text
+		def metadata = new XmlSlurper().parseText(xml)
+		def versions = metadata.versioning.versions.version*.text();
+		if (versions.contains(version)) {
+			throw new RuntimeException("${version} has already been released!")
+		}
+	}
+}
+
+publish.mustRunAfter checkVersion
