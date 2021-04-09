@@ -52,12 +52,12 @@ public class MixinMappingProviderTiny extends MappingProvider {
 			return mapped;
 
 		try {
-			Class c = this.getClass().getClassLoader().loadClass(method.getOwner().replace('/', '.'));
+			final Class<?> c = this.loadClassOrNull(method.getOwner().replace('/', '.'));
 			if (c == null || c == Object.class) {
 				return null;
 			}
 
-			for (Class cc : c.getInterfaces()) {
+			for (Class<?> cc : c.getInterfaces()) {
 				mapped = getMethodMapping(method.move(cc.getName().replace('.', '/')));
 				if (mapped != null) {
 					mapped = mapped.move(classMap.getOrDefault(method.getOwner(), method.getOwner()));
@@ -137,6 +137,14 @@ public class MixinMappingProviderTiny extends MappingProvider {
 			for (MethodDef method : cls.getMethods()) {
 				methodMap.put(new MappingMethod(fromClass, method.getName(from), method.getDescriptor(from)), new MappingMethod(toClass, method.getName(to), method.getDescriptor(to)));
 			}
+		}
+	}
+
+	private Class<?> loadClassOrNull(final String className) {
+		try {
+			return this.getClass().getClassLoader().loadClass(className);
+		} catch (final ClassNotFoundException ex) {
+			return null;
 		}
 	}
 }
