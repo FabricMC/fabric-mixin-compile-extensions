@@ -48,6 +48,22 @@ public class MixinMappingProviderTiny extends MappingProvider {
 
 	@Override
 	public MappingMethod getMethodMapping(MappingMethod method) {
+		MappingMethod mapped = getMethodMapping0(method);
+		if (mapped != null)
+			return mapped;
+		
+		if (method.getOwner() != null) {
+			String newOwner = classMap.get(method.getOwner());
+		
+			if (newOwner != null && !newOwner.equals(method.getOwner())) {
+				return new MappingMethodLazy(newOwner, method.getSimpleName(), method.getDesc(), this);
+			}
+		}
+
+		return null;
+	}
+	
+	private MappingMethod getMethodMapping0(MappingMethod method) {
 		MappingMethod mapped = this.methodMap.get(method);
 		if (mapped != null)
 			return mapped;
@@ -59,7 +75,7 @@ public class MixinMappingProviderTiny extends MappingProvider {
 			
 			if (c != null && c != Object.class) {
 				for (Class<?> cc : c.getInterfaces()) {
-					mapped = getMethodMapping(method.move(cc.getName().replace('.', '/')));
+					mapped = getMethodMapping0(method.move(cc.getName().replace('.', '/')));
 					if (mapped != null) {
 						mapped = mapped.move(classMap.getOrDefault(method.getOwner(), method.getOwner()));
 						methodMap.put(method, mapped);
@@ -68,7 +84,7 @@ public class MixinMappingProviderTiny extends MappingProvider {
 				}
 	
 				if (c.getSuperclass() != null) {
-					mapped = getMethodMapping(method.move(c.getSuperclass().getName().replace('.', '/')));
+					mapped = getMethodMapping0(method.move(c.getSuperclass().getName().replace('.', '/')));
 					if (mapped != null) {
 						mapped = mapped.move(classMap.getOrDefault(method.getOwner(), method.getOwner()));
 						methodMap.put(method, mapped);
@@ -78,12 +94,6 @@ public class MixinMappingProviderTiny extends MappingProvider {
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
-		}
-		
-		String newOwner = classMap.get(method.getOwner());
-		
-		if (newOwner != null && !newOwner.equals(method.getOwner())) {
-			return new MappingMethodLazy(newOwner, method.getSimpleName(), method.getDesc(), this);
 		}
 
 		return null;
