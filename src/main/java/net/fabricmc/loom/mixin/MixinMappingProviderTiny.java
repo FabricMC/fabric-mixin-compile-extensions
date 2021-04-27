@@ -28,6 +28,7 @@ import net.fabricmc.mapping.tree.*;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingField;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingMethod;
 import org.spongepowered.tools.obfuscation.mapping.common.MappingProvider;
+import org.spongepowered.tools.obfuscation.mapping.fg3.MappingMethodLazy;
 
 import javax.annotation.processing.Filer;
 import javax.annotation.processing.Messager;
@@ -50,36 +51,42 @@ public class MixinMappingProviderTiny extends MappingProvider {
 		MappingMethod mapped = this.methodMap.get(method);
 		if (mapped != null)
 			return mapped;
-
+		
+		if (method.getOwner() == null) return null;
+		
 		try {
 			final Class<?> c = this.loadClassOrNull(method.getOwner().replace('/', '.'));
-			if (c == null || c == Object.class) {
-				return null;
-			}
-
-			for (Class<?> cc : c.getInterfaces()) {
-				mapped = getMethodMapping(method.move(cc.getName().replace('.', '/')));
-				if (mapped != null) {
-					mapped = mapped.move(classMap.getOrDefault(method.getOwner(), method.getOwner()));
-					methodMap.put(method, mapped);
-					return mapped;
+			
+			if (c != null && c != Object.class) {
+				for (Class<?> cc : c.getInterfaces()) {
+					mapped = getMethodMapping(method.move(cc.getName().replace('.', '/')));
+					if (mapped != null) {
+						mapped = mapped.move(classMap.getOrDefault(method.getOwner(), method.getOwner()));
+						methodMap.put(method, mapped);
+						return mapped;
+					}
+				}
+	
+				if (c.getSuperclass() != null) {
+					mapped = getMethodMapping(method.move(c.getSuperclass().getName().replace('.', '/')));
+					if (mapped != null) {
+						mapped = mapped.move(classMap.getOrDefault(method.getOwner(), method.getOwner()));
+						methodMap.put(method, mapped);
+						return mapped;
+					}
 				}
 			}
-
-			if (c.getSuperclass() != null) {
-				mapped = getMethodMapping(method.move(c.getSuperclass().getName().replace('.', '/')));
-				if (mapped != null) {
-					mapped = mapped.move(classMap.getOrDefault(method.getOwner(), method.getOwner()));
-					methodMap.put(method, mapped);
-					return mapped;
-				}
-			}
-
-			return null;
 		} catch (Exception e) {
 			e.printStackTrace();
-			return null;
 		}
+		
+		String newOwner = classMap.get(method.getOwner());
+		
+		if (newOwner != null && !newOwner.equals(method.getOwner())) {
+			return new MappingMethodLazy(newOwner, method.getSimpleName(), method.getDesc(), this);
+		}
+
+		return null;
 	}
 
 	@Override
@@ -92,13 +99,13 @@ public class MixinMappingProviderTiny extends MappingProvider {
 			desc = desc.substring(i + 1);
 		}
 
-		MappingField fixed = new MappingField(field.getOwner(), field.getName(), desc);
+		MappingField fixed = new MappingField(field.getOwner(), field.getSimpleName(), desc);
 		MappingField mapped = this.fieldMap.get(fixed);
 		if (mapped != null)
 			return mapped;
-
-		return null;
-
+		
+		if (field.getOwner() == null) return null;
+		
 		/* try {
 			Class c = this.getClass().getClassLoader().loadClass(field.getOwner().replace('/', '.'));
 			if (c == null || c == Object.class) {
@@ -110,12 +117,29 @@ public class MixinMappingProviderTiny extends MappingProvider {
 				if (mapped != null)
 					return mapped;
 			}
-
-			return null;
 		} catch (Exception e) {
 			e.printStackTrace();
 			return null;
 		} */
+		
+		String newOwner = classMap.get(field.getOwner());
+		
+		if (newOwner != null && !newOwner.equals(field.getOwner())) {
+			String newDesc;
+			
+			if (desc.endsWith(";")) {
+				int pos = desc.indexOf('L');
+				assert pos >= 0;
+				String cls = desc.substring(pos + 1, desc.length() - 1);
+				newDesc = String.format("%s%s;", desc.substring(0, pos + 1), classMap.getOrDefault(cls, cls));
+			} else {
+				newDesc = desc;
+			}
+			
+			return new MappingField(newOwner, field.getSimpleName(), newDesc);
+		}
+
+		return null;
 	}
 
 	@Override
