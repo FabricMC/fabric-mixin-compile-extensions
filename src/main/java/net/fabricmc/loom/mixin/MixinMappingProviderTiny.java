@@ -28,6 +28,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.util.Map;
 
 import javax.annotation.processing.Filer;
@@ -47,6 +48,11 @@ import net.fabricmc.mapping.tree.TinyTree;
 
 public class MixinMappingProviderTiny extends MappingProvider {
 	private final String from, to;
+
+	// Done to account for MappingProvider's maps being from guava, and shaded.
+	protected final Map<String, String> classMap = getMap("classMap");
+	protected final Map<MappingField, MappingField> fieldMap = getMap("fieldMap");
+	protected final Map<MappingMethod, MappingMethod> methodMap = getMap("methodMap");
 
 	public MixinMappingProviderTiny(Messager messager, Filer filer, String from, String to) {
 		super(messager, filer);
@@ -170,6 +176,17 @@ public class MixinMappingProviderTiny extends MappingProvider {
 			return this.getClass().getClassLoader().loadClass(className);
 		} catch (final ClassNotFoundException ex) {
 			return null;
+		}
+	}
+
+	@SuppressWarnings("rawtypes")
+	private Map getMap(String name) {
+		try {
+			Field field = MappingProvider.class.getDeclaredField(name);
+			field.setAccessible(true);
+			return (Map) field.get(this);
+		} catch (ReflectiveOperationException e) {
+			throw new RuntimeException(e);
 		}
 	}
 }
