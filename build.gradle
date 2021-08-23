@@ -1,6 +1,7 @@
 plugins {
 	id 'java'
 	id 'maven-publish'
+	id 'org.cadixdev.licenser' version '0.6.1'
 }
 
 sourceCompatibility = 1.8
@@ -28,7 +29,7 @@ dependencies {
 	implementation ('com.google.code.gson:gson:2.8.5')
 	implementation ('com.google.guava:guava:27.1-jre')
 
-	implementation ('net.fabricmc:sponge-mixin:0.9.1+mixin.0.8.2') {
+	implementation ('net.fabricmc:sponge-mixin:0.10.0+mixin.0.8.4.snapshot') {
 		exclude module: 'launchwrapper'
 		exclude module: 'guava'
 		exclude module: 'gson'
@@ -36,12 +37,12 @@ dependencies {
 }
 
 task sourcesJar(type: Jar, dependsOn: classes) {
-	classifier = 'sources'
+	archiveClassifier.set('sources')
 	from sourceSets.main.allSource
 }
 
 task javadocJar(type: Jar, dependsOn: javadoc) {
-	classifier = 'javadoc'
+	archiveClassifier.set('javadoc')
 	from javadoc.destinationDir
 }
 
@@ -49,11 +50,14 @@ tasks.withType(JavaCompile).configureEach {
 	it.options.encoding = "UTF-8"
 
 	if (JavaVersion.current().isJava9Compatible()) {
-		it.options.release = 8
+		it.options.release.set(8)
 	}
 }
 
-apply from: 'https://github.com/FabricMC/fabric-docs/raw/master/gradle/license.gradle'
+license {
+	header file('HEADER')
+	include '**/*.java'
+}
 
 publishing {
 	publications {
