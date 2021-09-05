@@ -66,10 +66,11 @@ public class MixinMappingProviderTiny extends MappingProvider {
 		if (mapped != null) return mapped;
 
 		if (method.getOwner() != null) {
-			String newOwner = classMap.get(method.getOwner());
+			String newOwner = classMap.getOrDefault(method.getOwner(), method.getOwner());
+			String newDesc = new MappingMethodLazy(newOwner, method.getSimpleName(), method.getDesc(), this).getDesc();
 
-			if (newOwner != null && !newOwner.equals(method.getOwner())) {
-				return new MappingMethodLazy(newOwner, method.getSimpleName(), method.getDesc(), this);
+			if (!newOwner.equals(method.getOwner()) || !newDesc.equals(method.getDesc())) {
+				return new MappingMethod(newOwner, method.getSimpleName(), newDesc);
 			}
 		}
 
@@ -91,20 +92,19 @@ public class MixinMappingProviderTiny extends MappingProvider {
 		if (mapped != null) return mapped;
 
 		if (field.getOwner() != null) {
-			String newOwner = classMap.get(field.getOwner());
+			String newOwner = classMap.getOrDefault(field.getOwner(), field.getOwner());
+			String newDesc;
 
-			if (newOwner != null && !newOwner.equals(field.getOwner())) {
-				String newDesc;
+			if (desc.endsWith(";")) {
+				int pos = desc.indexOf('L');
+				assert pos >= 0;
+				String cls = desc.substring(pos + 1, desc.length() - 1);
+				newDesc = String.format("%s%s;", desc.substring(0, pos + 1), classMap.getOrDefault(cls, cls));
+			} else {
+				newDesc = desc;
+			}
 
-				if (desc.endsWith(";")) {
-					int pos = desc.indexOf('L');
-					assert pos >= 0;
-					String cls = desc.substring(pos + 1, desc.length() - 1);
-					newDesc = String.format("%s%s;", desc.substring(0, pos + 1), classMap.getOrDefault(cls, cls));
-				} else {
-					newDesc = desc;
-				}
-
+			if (!newOwner.equals(field.getOwner()) || !newDesc.equals(field.getDesc())) {
 				return new MappingField(newOwner, field.getSimpleName(), newDesc);
 			}
 		}
@@ -179,12 +179,12 @@ public class MixinMappingProviderTiny extends MappingProvider {
 		}
 	}
 
-	@SuppressWarnings("rawtypes")
-	private Map getMap(String name) {
+	@SuppressWarnings("unchecked")
+	private <K, V> Map<K, V> getMap(String name) {
 		try {
 			Field field = MappingProvider.class.getDeclaredField(name);
 			field.setAccessible(true);
-			return (Map) field.get(this);
+			return (Map<K, V>) field.get(this);
 		} catch (ReflectiveOperationException e) {
 			throw new RuntimeException(e);
 		}
