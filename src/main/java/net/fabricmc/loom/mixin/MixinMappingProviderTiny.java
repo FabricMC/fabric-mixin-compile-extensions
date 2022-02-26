@@ -174,7 +174,7 @@ public class MixinMappingProviderTiny extends MappingProvider {
 	private Class<?> loadClassOrNull(final String className) {
 		try {
 			return this.getClass().getClassLoader().loadClass(className);
-		} catch (final ClassNotFoundException ex) {
+		} catch (final ClassNotFoundException | NoClassDefFoundError ex) {
 			return null;
 		}
 	}
