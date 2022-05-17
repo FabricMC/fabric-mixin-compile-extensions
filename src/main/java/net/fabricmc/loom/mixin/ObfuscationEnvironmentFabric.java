@@ -24,13 +24,13 @@
 
 package net.fabricmc.loom.mixin;
 
+import javax.annotation.processing.Filer;
+import javax.annotation.processing.Messager;
+
 import org.spongepowered.tools.obfuscation.ObfuscationEnvironment;
 import org.spongepowered.tools.obfuscation.ObfuscationType;
 import org.spongepowered.tools.obfuscation.mapping.IMappingProvider;
 import org.spongepowered.tools.obfuscation.mapping.IMappingWriter;
-
-import javax.annotation.processing.Filer;
-import javax.annotation.processing.Messager;
 
 public class ObfuscationEnvironmentFabric extends ObfuscationEnvironment {
 	protected ObfuscationEnvironmentFabric(ObfuscationType type) {

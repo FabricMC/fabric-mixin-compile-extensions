@@ -1,6 +1,8 @@
 plugins {
 	id 'java'
 	id 'maven-publish'
+	id 'checkstyle'
+	id "com.diffplug.spotless" version "6.3.0"
 }
 
 sourceCompatibility = 1.8
@@ -8,41 +10,40 @@ targetCompatibility = 1.8
 
 group = 'net.fabricmc'
 archivesBaseName = project.name
-version = '0.4.7'
+version = '0.5.0'
 
 def ENV = System.getenv()
 version = version + (ENV.GITHUB_ACTIONS ? "" : "+local")
 
 repositories {
-	mavenCentral()
 	maven {
 		name = "Fabric"
 		url = 'https://maven.fabricmc.net/'
 	}
+	mavenCentral()
 }
 
 dependencies {
-	implementation 'net.fabricmc:tiny-mappings-parser:0.3.0+build.17'
+	implementation 'net.fabricmc:mapping-io:0.2.1'
+	implementation ('net.fabricmc:sponge-mixin:0.11.4+mixin.0.8.5') {
+		transitive = false
+	}
+	implementation 'org.ow2.asm:asm:9.3'
+}
 
-	// use newer dependencies
-	implementation ('com.google.code.gson:gson:2.8.5')
-	implementation ('com.google.guava:guava:27.1-jre')
-
-	implementation ('net.fabricmc:sponge-mixin:0.9.1+mixin.0.8.2') {
-		exclude module: 'launchwrapper'
-		exclude module: 'guava'
-		exclude module: 'gson'
+spotless {
+	java {
+		licenseHeaderFile(rootProject.file("HEADER"))
 	}
 }
 
-task sourcesJar(type: Jar, dependsOn: classes) {
-	classifier = 'sources'
-	from sourceSets.main.allSource
+checkstyle {
+	configFile = file('checkstyle.xml')
+	toolVersion = '9.3'
 }
 
-task javadocJar(type: Jar, dependsOn: javadoc) {
-	classifier = 'javadoc'
-	from javadoc.destinationDir
+java {
+	withSourcesJar()
 }
 
 tasks.withType(JavaCompile).configureEach {
@@ -53,8 +54,6 @@ tasks.withType(JavaCompile).configureEach {
 	}
 }
 
-apply from: 'https://github.com/FabricMC/fabric-docs/raw/master/gradle/license.gradle'
-
 publishing {
 	publications {
 		plugin(MavenPublication) { publication ->
@@ -62,10 +61,7 @@ publishing {
 			artifactId project.archivesBaseName
 			version project.version
 
-			from components["java"]
-	
-			artifact sourcesJar
-			artifact javadocJar
+			from components.java
 		}
 	}
 	repositories {
