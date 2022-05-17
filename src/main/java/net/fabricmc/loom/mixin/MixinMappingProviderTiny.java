@@ -39,6 +39,7 @@ import javax.annotation.processing.Filer;
 import javax.annotation.processing.Messager;
 import java.io.*;
 import java.lang.reflect.Field;
+import java.net.URL;
 import java.util.Map;
 
 public class MixinMappingProviderTiny extends MappingProvider {
@@ -181,17 +182,21 @@ public class MixinMappingProviderTiny extends MappingProvider {
 	private ClassNode loadClassOrNull(final String className) {
 		String classFileName = getClassFileName(className);
 
-		try (InputStream is = classLoader.getResourceAsStream(classFileName)) {
-			if (is == null) {
-				return null;
-			}
+		// Use getResource instead of getResourceAsStream to work around https://bugs.openjdk.java.net/browse/JDK-8205976 :)
+		URL resource = classLoader.getResource(classFileName);
 
+		if (resource == null) {
+			// Class not found.
+			return null;
+		}
+
+		try (InputStream is = resource.openStream()) {
 			final ClassNode classNode = new ClassNode();
 			new ClassReader(is).accept(classNode, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
 
 			return classNode;
 		} catch (IOException e) {
-			throw new UncheckedIOException("Failed to read class" + className, e);
+			throw new UncheckedIOException("Failed to read class " + className, e);
 		}
 	}
 
