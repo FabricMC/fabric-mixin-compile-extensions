@@ -38,7 +38,6 @@ import javax.annotation.processing.Filer;
 import javax.annotation.processing.Messager;
 
 import org.objectweb.asm.ClassReader;
-import org.objectweb.asm.tree.ClassNode;
 import org.spongepowered.asm.obfuscation.mapping.IMapping;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingField;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingMethod;
@@ -124,17 +123,17 @@ public class MixinMappingProviderTiny extends MappingProvider {
 		if (member.getOwner() == null) return null;
 
 		try {
-			final ClassNode c = this.loadClassOrNull(member.getOwner());
+			final ClassReader c = this.loadClassOrNull(member.getOwner());
 
 			if (c == null) {
 				return null;
 			}
 
-			if ("java/lang/Object".equals(c.name)) {
+			if ("java/lang/Object".equals(c.getClassName())) {
 				return null;
 			}
 
-			for (String iface : c.interfaces) {
+			for (String iface : c.getInterfaces()) {
 				mapped = getMapping0(member.move(iface), map);
 
 				if (mapped != null) {
@@ -144,8 +143,8 @@ public class MixinMappingProviderTiny extends MappingProvider {
 				}
 			}
 
-			if (c.superName != null) {
-				mapped = getMapping0(member.move(c.superName), map);
+			if (c.getSuperName() != null) {
+				mapped = getMapping0(member.move(c.getSuperName()), map);
 
 				if (mapped != null) {
 					mapped = mapped.move(classMap.getOrDefault(member.getOwner(), member.getOwner()));
@@ -186,7 +185,7 @@ public class MixinMappingProviderTiny extends MappingProvider {
 		}
 	}
 
-	private ClassNode loadClassOrNull(final String className) {
+	private ClassReader loadClassOrNull(final String className) {
 		String classFileName = getClassFileName(className);
 
 		// Use getResource instead of getResourceAsStream to work around https://bugs.openjdk.java.net/browse/JDK-8205976 :)
@@ -198,10 +197,7 @@ public class MixinMappingProviderTiny extends MappingProvider {
 		}
 
 		try (InputStream is = resource.openStream()) {
-			final ClassNode classNode = new ClassNode();
-			new ClassReader(is).accept(classNode, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
-
-			return classNode;
+			return new ClassReader(is);
 		} catch (IOException e) {
 			throw new UncheckedIOException("Failed to read class " + className, e);
 		}
