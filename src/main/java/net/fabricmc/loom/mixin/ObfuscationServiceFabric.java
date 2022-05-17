@@ -24,15 +24,15 @@
 
 package net.fabricmc.loom.mixin;
 
-import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
-import org.spongepowered.tools.obfuscation.service.IObfuscationService;
-import org.spongepowered.tools.obfuscation.service.ObfuscationTypeDescriptor;
-
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
+
+import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
+import org.spongepowered.tools.obfuscation.service.IObfuscationService;
+import org.spongepowered.tools.obfuscation.service.ObfuscationTypeDescriptor;
 
 public class ObfuscationServiceFabric implements IObfuscationService {
 	public static final String IN_MAP_FILE = "inMapFile";

@@ -1,6 +1,7 @@
 plugins {
 	id 'java'
 	id 'maven-publish'
+	id 'checkstyle'
 	id "com.diffplug.spotless" version "6.3.0"
 }
 
@@ -35,6 +36,11 @@ spotless {
 	java {
 		licenseHeaderFile(rootProject.file("HEADER"))
 	}
+}
+
+checkstyle {
+	configFile = file('checkstyle.xml')
+	toolVersion = '9.3'
 }
 
 java {

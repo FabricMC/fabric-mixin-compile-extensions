@@ -26,7 +26,6 @@ package net.fabricmc.loom.mixin;
 
 public final class MixinExtUtils {
 	private MixinExtUtils() {
-
 	}
 
 	public static String capitalize(String s) {

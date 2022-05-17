@@ -24,16 +24,17 @@
 
 package net.fabricmc.loom.mixin;
 
+import java.io.IOException;
+import java.io.PrintWriter;
+
+import javax.annotation.processing.Filer;
+import javax.annotation.processing.Messager;
+
 import org.spongepowered.asm.obfuscation.mapping.common.MappingField;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingMethod;
 import org.spongepowered.tools.obfuscation.ObfuscationType;
 import org.spongepowered.tools.obfuscation.mapping.IMappingConsumer;
 import org.spongepowered.tools.obfuscation.mapping.common.MappingWriter;
-
-import javax.annotation.processing.Filer;
-import javax.annotation.processing.Messager;
-import java.io.IOException;
-import java.io.PrintWriter;
 
 /**
  * Created by asie on 10/9/16.
@@ -51,9 +52,11 @@ public class MixinMappingWriterTiny extends MappingWriter {
 
 			try (PrintWriter writer = this.openFileWriter(output, type + " output TinyMappings")) {
 				writer.println(String.format("v1\t%s\t%s", from, to));
+
 				for (IMappingConsumer.MappingSet.Pair<MappingField> pair : fields) {
 					writer.println(String.format("FIELD\t%s\t%s\t%s\t%s", pair.from.getOwner(), pair.from.getDesc(), pair.from.getSimpleName(), pair.to.getSimpleName()));
 				}
+
 				for (IMappingConsumer.MappingSet.Pair<MappingMethod> pair : methods) {
 					writer.println(String.format("METHOD\t%s\t%s\t%s\t%s", pair.from.getOwner(), pair.from.getDesc(), pair.from.getSimpleName(), pair.to.getSimpleName()));
 				}

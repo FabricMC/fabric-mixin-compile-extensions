@@ -24,9 +24,19 @@
 
 package net.fabricmc.loom.mixin;
 
-import net.fabricmc.mappingio.MappingReader;
-import net.fabricmc.mappingio.tree.MappingTree;
-import net.fabricmc.mappingio.tree.MemoryMappingTree;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.UncheckedIOException;
+import java.lang.reflect.Field;
+import java.net.URL;
+import java.util.Map;
+
+import javax.annotation.processing.Filer;
+import javax.annotation.processing.Messager;
+
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.tree.ClassNode;
 import org.spongepowered.asm.obfuscation.mapping.IMapping;
@@ -35,12 +45,9 @@ import org.spongepowered.asm.obfuscation.mapping.common.MappingMethod;
 import org.spongepowered.tools.obfuscation.mapping.common.MappingProvider;
 import org.spongepowered.tools.obfuscation.mapping.fg3.MappingMethodLazy;
 
-import javax.annotation.processing.Filer;
-import javax.annotation.processing.Messager;
-import java.io.*;
-import java.lang.reflect.Field;
-import java.net.URL;
-import java.util.Map;
+import net.fabricmc.mappingio.MappingReader;
+import net.fabricmc.mappingio.tree.MappingTree;
+import net.fabricmc.mappingio.tree.MemoryMappingTree;
 
 public class MixinMappingProviderTiny extends MappingProvider {
 	private final String from, to;
