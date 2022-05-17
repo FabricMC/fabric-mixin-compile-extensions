@@ -24,11 +24,13 @@
 
 package net.fabricmc.loom.mixin;
 
+import java.util.Locale;
+
 public final class MixinExtUtils {
 	private MixinExtUtils() {
 	}
 
 	public static String capitalize(String s) {
-		return s.substring(0, 1).toUpperCase() + s.substring(1);
+		return s.substring(0, 1).toUpperCase(Locale.ROOT) + s.substring(1);
 	}
 }
