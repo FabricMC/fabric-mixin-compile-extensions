@@ -1,6 +1,7 @@
 plugins {
 	id 'java'
 	id 'maven-publish'
+	id "com.diffplug.spotless" version "6.3.0"
 }
 
 sourceCompatibility = 1.8
@@ -35,14 +36,14 @@ dependencies {
 	}
 }
 
-task sourcesJar(type: Jar, dependsOn: classes) {
-	classifier = 'sources'
-	from sourceSets.main.allSource
+spotless {
+	java {
+		licenseHeaderFile(rootProject.file("HEADER"))
+	}
 }
 
-task javadocJar(type: Jar, dependsOn: javadoc) {
-	classifier = 'javadoc'
-	from javadoc.destinationDir
+java {
+	withSourcesJar()
 }
 
 tasks.withType(JavaCompile).configureEach {
@@ -53,8 +54,6 @@ tasks.withType(JavaCompile).configureEach {
 	}
 }
 
-apply from: 'https://github.com/FabricMC/fabric-docs/raw/master/gradle/license.gradle'
-
 publishing {
 	publications {
 		plugin(MavenPublication) { publication ->
@@ -62,10 +61,7 @@ publishing {
 			artifactId project.archivesBaseName
 			version project.version
 
-			from components["java"]
-	
-			artifact sourcesJar
-			artifact javadocJar
+			from components.java
 		}
 	}
 	repositories {
