@@ -24,27 +24,22 @@
 
 package net.fabricmc.loom.mixin;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
-import java.lang.reflect.Field;
-import java.util.Map;
-
-import javax.annotation.processing.Filer;
-import javax.annotation.processing.Messager;
-
+import net.fabricmc.mappingio.MappingReader;
+import net.fabricmc.mappingio.tree.MappingTree;
+import net.fabricmc.mappingio.tree.MemoryMappingTree;
+import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.tree.ClassNode;
 import org.spongepowered.asm.obfuscation.mapping.IMapping;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingField;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingMethod;
 import org.spongepowered.tools.obfuscation.mapping.common.MappingProvider;
 import org.spongepowered.tools.obfuscation.mapping.fg3.MappingMethodLazy;
 
-import net.fabricmc.mapping.tree.ClassDef;
-import net.fabricmc.mapping.tree.FieldDef;
-import net.fabricmc.mapping.tree.MethodDef;
-import net.fabricmc.mapping.tree.TinyMappingFactory;
-import net.fabricmc.mapping.tree.TinyTree;
+import javax.annotation.processing.Filer;
+import javax.annotation.processing.Messager;
+import java.io.*;
+import java.lang.reflect.Field;
+import java.util.Map;
 
 public class MixinMappingProviderTiny extends MappingProvider {
 	private final String from, to;
@@ -53,6 +48,8 @@ public class MixinMappingProviderTiny extends MappingProvider {
 	protected final Map<String, String> classMap = getMap("classMap");
 	protected final Map<MappingField, MappingField> fieldMap = getMap("fieldMap");
 	protected final Map<MappingMethod, MappingMethod> methodMap = getMap("methodMap");
+
+	private final ClassLoader classLoader = getClass().getClassLoader();
 
 	public MixinMappingProviderTiny(Messager messager, Filer filer, String from, String to) {
 		super(messager, filer);
@@ -119,27 +116,33 @@ public class MixinMappingProviderTiny extends MappingProvider {
 		if (member.getOwner() == null) return null;
 
 		try {
-			final Class<?> c = this.loadClassOrNull(member.getOwner().replace('/', '.'));
+			final ClassNode c = this.loadClassOrNull(member.getOwner());
 
-			if (c != null && c != Object.class) {
-				for (Class<?> cc : c.getInterfaces()) {
-					mapped = getMapping0(member.move(cc.getName().replace('.', '/')), map);
+			if (c == null) {
+				return null;
+			}
 
-					if (mapped != null) {
-						mapped = mapped.move(classMap.getOrDefault(member.getOwner(), member.getOwner()));
-						map.put(member, mapped);
-						return mapped;
-					}
+			if ("java/lang/Object".equals(c.name)) {
+				return null;
+			}
+
+			for (String iface : c.interfaces) {
+				mapped = getMapping0(member.move(iface), map);
+
+				if (mapped != null) {
+					mapped = mapped.move(classMap.getOrDefault(member.getOwner(), member.getOwner()));
+					map.put(member, mapped);
+					return mapped;
 				}
+			}
 
-				if (c.getSuperclass() != null) {
-					mapped = getMapping0(member.move(c.getSuperclass().getName().replace('.', '/')), map);
+			if (c.superName != null) {
+				mapped = getMapping0(member.move(c.superName), map);
 
-					if (mapped != null) {
-						mapped = mapped.move(classMap.getOrDefault(member.getOwner(), member.getOwner()));
-						map.put(member, mapped);
-						return mapped;
-					}
+				if (mapped != null) {
+					mapped = mapped.move(classMap.getOrDefault(member.getOwner(), member.getOwner()));
+					map.put(member, mapped);
+					return mapped;
 				}
 			}
 		} catch (Exception e) {
@@ -151,32 +154,49 @@ public class MixinMappingProviderTiny extends MappingProvider {
 
 	@Override
 	public void read(File input) throws IOException {
-		TinyTree tree;
+		MemoryMappingTree tree = new MemoryMappingTree();
+
 		try (BufferedReader reader = new BufferedReader(new FileReader(input))) {
-			tree = TinyMappingFactory.loadWithDetection(reader);
+			MappingReader.read(reader, tree);
 		}
 
-		for (ClassDef cls : tree.getClasses()) {
-			String fromClass = cls.getName(from);
+		final int fromId = tree.getNamespaceId(from);
+		final int toId = tree.getNamespaceId(to);
+
+		for (MappingTree.ClassMapping cls : tree.getClasses()) {
+			String fromClass = cls.getName(fromId);
 			String toClass = cls.getName(to);
 			classMap.put(fromClass, toClass);
 
-			for (FieldDef field : cls.getFields()) {
-				fieldMap.put(new MappingField(fromClass, field.getName(from), field.getDescriptor(from)), new MappingField(toClass, field.getName(to), field.getDescriptor(to)));
+			for (MappingTree.FieldMapping field : cls.getFields()) {
+				fieldMap.put(new MappingField(fromClass, field.getName(fromId), field.getDesc(fromId)), new MappingField(toClass, field.getName(toId), field.getDesc(toId)));
 			}
 
-			for (MethodDef method : cls.getMethods()) {
-				methodMap.put(new MappingMethod(fromClass, method.getName(from), method.getDescriptor(from)), new MappingMethod(toClass, method.getName(to), method.getDescriptor(to)));
+			for (MappingTree.MethodMapping method : cls.getMethods()) {
+				methodMap.put(new MappingMethod(fromClass, method.getName(fromId), method.getDesc(fromId)), new MappingMethod(toClass, method.getName(toId), method.getDesc(toId)));
 			}
 		}
 	}
 
-	private Class<?> loadClassOrNull(final String className) {
-		try {
-			return this.getClass().getClassLoader().loadClass(className);
-		} catch (final ClassNotFoundException | NoClassDefFoundError ex) {
-			return null;
+	private ClassNode loadClassOrNull(final String className) {
+		String classFileName = getClassFileName(className);
+
+		try (InputStream is = classLoader.getResourceAsStream(classFileName)) {
+			if (is == null) {
+				return null;
+			}
+
+			final ClassNode classNode = new ClassNode();
+			new ClassReader(is).accept(classNode, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
+
+			return classNode;
+		} catch (IOException e) {
+			throw new UncheckedIOException("Failed to read class" + className, e);
 		}
+	}
+
+	public String getClassFileName(String className) {
+		return className.replace('.', '/').concat(".class");
 	}
 
 	@SuppressWarnings("unchecked")
