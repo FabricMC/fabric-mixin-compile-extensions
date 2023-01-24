@@ -40,12 +40,11 @@ import org.spongepowered.asm.obfuscation.mapping.common.MappingMethod;
 import org.spongepowered.tools.obfuscation.interfaces.ITypeHandleProvider;
 import org.spongepowered.tools.obfuscation.mapping.common.MappingProvider;
 import org.spongepowered.tools.obfuscation.mapping.fg3.MappingMethodLazy;
+import org.spongepowered.tools.obfuscation.mirror.TypeHandle;
 
 import net.fabricmc.mappingio.MappingReader;
 import net.fabricmc.mappingio.tree.MappingTree;
 import net.fabricmc.mappingio.tree.MemoryMappingTree;
-
-import org.spongepowered.tools.obfuscation.mirror.TypeHandle;
 
 public class MixinMappingProviderTiny extends MappingProvider {
 	private final ITypeHandleProvider types;
@@ -143,6 +142,7 @@ public class MixinMappingProviderTiny extends MappingProvider {
 			}
 
 			final TypeHandle superType = c.getSuperclass();
+
 			if (superType != null) {
 				mapped = getMapping0(member.move(superType.getName()), map);
 
