@@ -40,7 +40,7 @@ public class ObfuscationEnvironmentFabric extends ObfuscationEnvironment {
 	@Override
 	protected IMappingProvider getMappingProvider(Messager messager, Filer filer) {
 		String[] key = type.getKey().split(":");
-		return new MixinMappingProviderTiny(messager, filer, key[0], key[1]);
+		return new MixinMappingProviderTiny(messager, filer, this.ap.getTypeProvider(), key[0], key[1]);
 	}
 
 	@Override
