@@ -28,27 +28,26 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.UncheckedIOException;
 import java.lang.reflect.Field;
-import java.net.URL;
 import java.util.Map;
 
 import javax.annotation.processing.Filer;
 import javax.annotation.processing.Messager;
 
-import org.objectweb.asm.ClassReader;
 import org.spongepowered.asm.obfuscation.mapping.IMapping;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingField;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingMethod;
+import org.spongepowered.tools.obfuscation.interfaces.ITypeHandleProvider;
 import org.spongepowered.tools.obfuscation.mapping.common.MappingProvider;
 import org.spongepowered.tools.obfuscation.mapping.fg3.MappingMethodLazy;
+import org.spongepowered.tools.obfuscation.mirror.TypeHandle;
 
 import net.fabricmc.mappingio.MappingReader;
 import net.fabricmc.mappingio.tree.MappingTree;
 import net.fabricmc.mappingio.tree.MemoryMappingTree;
 
 public class MixinMappingProviderTiny extends MappingProvider {
+	private final ITypeHandleProvider types;
 	private final String from, to;
 
 	// Done to account for MappingProvider's maps being from guava, and shaded.
@@ -56,10 +55,9 @@ public class MixinMappingProviderTiny extends MappingProvider {
 	protected final Map<MappingField, MappingField> fieldMap = getMap("fieldMap");
 	protected final Map<MappingMethod, MappingMethod> methodMap = getMap("methodMap");
 
-	private final ClassLoader classLoader = getClass().getClassLoader();
-
-	public MixinMappingProviderTiny(Messager messager, Filer filer, String from, String to) {
+	public MixinMappingProviderTiny(Messager messager, Filer filer, ITypeHandleProvider types, String from, String to) {
 		super(messager, filer);
+		this.types = types;
 		this.from = from;
 		this.to = to;
 	}
@@ -123,18 +121,18 @@ public class MixinMappingProviderTiny extends MappingProvider {
 		if (member.getOwner() == null) return null;
 
 		try {
-			final ClassReader c = this.loadClassOrNull(member.getOwner());
+			final TypeHandle c = this.loadClassOrNull(member.getOwner());
 
 			if (c == null) {
 				return null;
 			}
 
-			if ("java/lang/Object".equals(c.getClassName())) {
+			if ("java/lang/Object".equals(c.getName())) {
 				return null;
 			}
 
-			for (String iface : c.getInterfaces()) {
-				mapped = getMapping0(member.move(iface), map);
+			for (TypeHandle iface : c.getInterfaces()) {
+				mapped = getMapping0(member.move(iface.getName()), map);
 
 				if (mapped != null) {
 					mapped = mapped.move(classMap.getOrDefault(member.getOwner(), member.getOwner()));
@@ -143,8 +141,10 @@ public class MixinMappingProviderTiny extends MappingProvider {
 				}
 			}
 
-			if (c.getSuperName() != null) {
-				mapped = getMapping0(member.move(c.getSuperName()), map);
+			final TypeHandle superType = c.getSuperclass();
+
+			if (superType != null) {
+				mapped = getMapping0(member.move(superType.getName()), map);
 
 				if (mapped != null) {
 					mapped = mapped.move(classMap.getOrDefault(member.getOwner(), member.getOwner()));
@@ -185,26 +185,8 @@ public class MixinMappingProviderTiny extends MappingProvider {
 		}
 	}
 
-	private ClassReader loadClassOrNull(final String className) {
-		String classFileName = getClassFileName(className);
-
-		// Use getResource instead of getResourceAsStream to work around https://bugs.openjdk.java.net/browse/JDK-8205976 :)
-		URL resource = classLoader.getResource(classFileName);
-
-		if (resource == null) {
-			// Class not found.
-			return null;
-		}
-
-		try (InputStream is = resource.openStream()) {
-			return new ClassReader(is);
-		} catch (IOException e) {
-			throw new UncheckedIOException("Failed to read class " + className, e);
-		}
-	}
-
-	public String getClassFileName(String className) {
-		return className.replace('.', '/').concat(".class");
+	private TypeHandle loadClassOrNull(final String className) {
+		return this.types.getTypeHandle(className);
 	}
 
 	@SuppressWarnings("unchecked")

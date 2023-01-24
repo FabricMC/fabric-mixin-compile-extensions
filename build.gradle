@@ -28,7 +28,8 @@ dependencies {
 	implementation ('net.fabricmc:sponge-mixin:0.11.4+mixin.0.8.5') {
 		transitive = false
 	}
-	implementation 'org.ow2.asm:asm:9.3'
+	implementation "org.ow2.asm:asm-tree:$asmVersion"
+	implementation "org.ow2.asm:asm:$asmVersion"
 }
 
 spotless {
